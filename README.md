@@ -1,6 +1,22 @@
-# Relay
+<div align="center">
+  <img src="relay/static/icon.svg" alt="Relay icon" width="64" height="64">
+  <h1>Relay</h1>
+  <p><strong>A standalone, self-hosted household download appliance powered by <code>aria2</code>, Flask, and Waitress.</strong></p>
+  <p>
+    <img src="https://img.shields.io/badge/python-3.10%2B-1b1b19?style=flat-square&logo=python&logoColor=white" alt="Python 3.10+">
+    <img src="https://img.shields.io/badge/engine-aria2-e5561a?style=flat-square" alt="aria2">
+    <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Docker-57554f?style=flat-square" alt="Cross-platform">
+    <img src="https://img.shields.io/badge/license-MIT-2f7d4f?style=flat-square" alt="MIT License">
+  </p>
+</div>
 
-A standalone, self-hosted household download relay powered by `aria2`, Flask, and Waitress.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/demo-dark.gif">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/demo-light.gif">
+    <img src="docs/assets/demo-dark.gif" alt="Relay live demo — pasting a link, watching segmented download progress, and expanding multi-file downloads" width="820">
+  </picture>
+</p>
 
 Open Relay in any browser on your network, enter your name once, and paste a link (HTTP, HTTPS, FTP, magnet, or `.torrent` file). Relay downloads it in the background and delivers finished files straight to your device—single files as-is, multi-file folders as an instant streaming `.zip`.
 
@@ -9,6 +25,34 @@ Built to run anywhere:
 - **Docker / Docker + Gluetun VPN** (`docker compose up -d --build`)
 - **Hardened Linux home server** with dedicated system users, `nftables` VPN-only kill-switch, automatic NAT-PMP port forwarding, optional multi-exit WireGuard switcher, and both **systemd** and **OpenRC** service templates
 - **Agent-configurable**: includes an [`agents/`](agents/) folder so any AI coding agent (Claude Code, Codex, Antigravity, Cursor, etc.) can inspect your machine and configure Relay for your exact environment.
+
+---
+
+## Screenshots
+
+### Light & Dark Appliance Themes
+
+Relay automatically follows your device's color scheme—warm paper in daylight, warm charcoal at night—with segmented progress meters, live speed/ETA readouts, expandable multi-file drawers, a speed limit switch, and an optional VPN exit switcher.
+
+<table>
+  <tr>
+    <th align="center">Warm Paper (Light)</th>
+    <th align="center">Charcoal (Dark)</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="docs/assets/dashboard-light.png" alt="Relay desktop dashboard in light mode"></td>
+    <td valign="top"><img src="docs/assets/dashboard-dark.png" alt="Relay desktop dashboard in dark mode"></td>
+  </tr>
+</table>
+
+### Mobile Ready
+
+On phones and tablets, auto-save defaults to off (so big files never arrive unasked), controls stack cleanly for thumb reach, and you can kick off a download on your phone and pick it up on your computer later.
+
+<p align="center">
+  <img src="docs/assets/mobile-light.png" alt="Relay mobile view in light mode" width="260">&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/assets/mobile-dark.png" alt="Relay mobile view in dark mode" width="260">
+</p>
 
 ---
 
