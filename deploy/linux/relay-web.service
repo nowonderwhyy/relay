@@ -1,0 +1,25 @@
+[Unit]
+Description=Relay household download web service
+After=network-online.target relay-guard.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__WEB_USER__
+Group=__WEB_USER__
+Environment=RELAY_CONFIG=__CONFIG_DIR__/config.json
+Environment=RELAY_CONFIG_GROUP=__WEB_USER__
+ExecStart=/opt/relay/venv/bin/relay serve --config __CONFIG_DIR__/config.json
+Restart=on-failure
+RestartSec=3
+UMask=0027
+# Allow binding privileged ports (e.g. 80) without running the web app as root.
+# NoNewPrivileges must remain false so the single sudoers rule for relay-engine works.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectHome=true
+ReadWritePaths=__DATA_DIR__ __STAGING_DIR__
+
+[Install]
+WantedBy=multi-user.target

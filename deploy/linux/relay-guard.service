@@ -1,0 +1,13 @@
+[Unit]
+Description=Relay VPN-only nftables kill-switch guard
+DefaultDependencies=no
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/relay-engine guard
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+#!/bin/sh
+# Start Relay's download engine and re-apply the nftables guard when the VPN interface comes up.
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+VPN_IFACE="__VPN_IFACE__"
+
+[ "$1" = "$VPN_IFACE" ] || exit 0
+[ "$2" = "up" ] || exit 0
+
+tries=0
+while [ "$tries" -lt 5 ]; do
+    if out=$(/usr/local/sbin/relay-engine start 2>&1); then
+        logger -t relay "Relay engine started after $VPN_IFACE came up"
+        exit 0
+    fi
+    tries=$((tries + 1))
+    sleep 3
+done
+logger -t relay "Relay engine failed to start after $VPN_IFACE came up: $out"
+exit 0

@@ -1,0 +1,23 @@
+#!/sbin/openrc-run
+name="Relay web"
+description="Household download page for Relay"
+command="/opt/relay/venv/bin/relay"
+command_args="serve --config __CONFIG_DIR__/config.json"
+command_user="__WEB_USER__:__WEB_USER__"
+supervisor="supervise-daemon"
+respawn_delay=3
+respawn_max=0
+capabilities="^cap_net_bind_service"
+umask=0027
+output_log="/var/log/relay-web.log"
+error_log="/var/log/relay-web.log"
+
+depend() {
+	need localmount
+	after net
+}
+
+start_pre() {
+	checkpath -f -o __WEB_USER__:__WEB_USER__ -m 0640 /var/log/relay-web.log
+	checkpath -d -o __WEB_USER__:__WEB_USER__ -m 0750 __DATA_DIR__
+}

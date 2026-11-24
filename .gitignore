@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+*.spec
+.venv/
+venv/
+.pytest_cache/
+
+# Local runtime state & secrets (never commit!)
+relay-data/
+data/
+staging/
+config.json
+engine.json
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.torrent
+*.nmconnection
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

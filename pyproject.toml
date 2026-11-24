@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "relay-dl"
+version = "1.0.0"
+description = "Standalone self-hosted household download relay powered by aria2, with optional VPN kill-switch and agent-driven environment setup."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [
+    { name = "nowonderwhyy" },
+]
+keywords = ["download-manager", "aria2", "self-hosted", "torrent", "vpn", "homelab", "lan"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "Flask>=3.0,<4",
+    "waitress>=3.0,<4",
+]
+
+[project.optional-dependencies]
+build = [
+    "pyinstaller>=6.0,<7",
+]
+dev = [
+    "pytest>=8.0,<9",
+]
+
+[project.scripts]
+relay = "relay.cli:main"
+relay-engine = "relay.server_engine:main"
+
+[project.urls]
+Homepage = "https://github.com/nowonderwhyy/relay"
+Repository = "https://github.com/nowonderwhyy/relay"
+Issues = "https://github.com/nowonderwhyy/relay/issues"
+
+[tool.setuptools.packages.find]
+include = ["relay*"]
+
+[tool.setuptools.package-data]
+relay = ["static/*"]

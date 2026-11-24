@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#eeece6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171614" media="(prefers-color-scheme: dark)">
+<title>Relay</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css?v=12">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">
+    <img src="/static/icon.svg" alt="" width="26" height="26">
+    <span class="wordmark" id="brand-name">Relay</span>
+    <span class="host" id="brand-host">Local</span>
+  </a>
+  <div class="status" id="status" hidden>
+    <span class="indicator" id="vpn" title="Connection status"><i class="led"></i><span id="vpn-text">Engine</span></span>
+    <span class="who"><span id="me"></span><button class="link" id="logout" type="button">Not you?</button></span>
+  </div>
+</header>
+
+<main id="app" hidden>
+  <section class="intake">
+    <h1 id="headline">Send a download to Relay.</h1>
+    <p class="lede" id="lede">It downloads in the background and keeps going after you close this page.
+      When it’s done, it comes straight to this device.</p>
+    <form class="intake-form" id="add-form" autocomplete="off">
+      <label class="sr" for="link">Link</label>
+      <input id="link" name="link" type="text" inputmode="url" spellcheck="false" autocapitalize="off"
+             placeholder="Paste a web, FTP or magnet link">
+      <button class="btn primary" id="add-button" type="submit">Download</button>
+    </form>
+    <p class="alt">Have a .torrent file? <label class="file-link">Choose it<input id="torrent" type="file" accept=".torrent,application/x-bittorrent"></label><span class="hint">, or drop it anywhere on this page</span>.</p>
+    <div class="setting">
+      <label><input type="checkbox" id="autosave"> Save finished downloads to this device automatically</label>
+      <span class="setting-hint">On by default on computers, off on phones. Works while Relay is open in a tab; when you come back, anything that finished while you were away comes down too.</span>
+    </div>
+    <p class="notice" id="engine-note" hidden></p>
+  </section>
+
+  <section class="ledger">
+    <div class="ledger-head">
+      <h2 class="ledger-title">Your downloads <span class="count" id="count-mine"></span></h2>
+      <div class="ledger-tools">
+        <span class="readout" id="readout"></span>
+        <button class="link" id="clear-history" type="button" hidden>Clear history</button>
+      </div>
+    </div>
+    <ul class="jobs" id="jobs"></ul>
+    <div class="empty" id="empty" hidden>
+      <p class="empty-title">Nothing here yet. Here’s how it works:</p>
+      <ol class="how">
+        <li><span>01</span>Paste a link, or choose a .torrent file.</li>
+        <li id="how-step-2"><span>02</span>Relay downloads it in the background.</li>
+        <li><span>03</span>It saves to this device as soon as it’s done.</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="limit">
+      <span class="limit-label" id="limit-label">Speed limit</span>
+      <div class="switch" id="speed-limit" role="radiogroup" aria-labelledby="limit-label"></div>
+    </div>
+    <div class="limit" id="location-row" hidden>
+      <label class="limit-label" for="location">VPN exit</label>
+      <select class="location-select" id="location" aria-label="VPN exit location">
+        <option value="">Loading…</option>
+      </select>
+    </div>
+    <p id="foot-note">Finished downloads stay on this host for up to <span id="keep-days">7</span> days, so you can save them again from another device.
+      Delete or Clear history erases them right away. Relay keeps no other record of what you download.</p>
+  </footer>
+</main>
+
+<div class="sign-in" id="sign-in" hidden>
+  <form class="sign-form" id="login-form">
+    <h1>Who’s downloading?</h1>
+    <p class="lede">Your name goes on the downloads you start, so everyone on the network can tell whose are whose.</p>
+    <label for="login-name">Name</label>
+    <input id="login-name" type="text" maxlength="24" autocomplete="nickname" required>
+    <div class="password-field" id="password-field" hidden>
+      <label for="login-password">Household password</label>
+      <input id="login-password" type="password" autocomplete="current-password">
+    </div>
+    <button class="btn primary wide" type="submit">Continue</button>
+    <p class="notice" id="login-note" hidden></p>
+  </form>
+</div>
+
+<div class="drop" id="drop" hidden><div class="drop-box">Drop to download</div></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden><i class="led"></i><span id="toast-text"></span></div>
+<script src="/static/app.js?v=12"></script>
+</body>
+</html>

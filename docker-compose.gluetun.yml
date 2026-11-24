@@ -1,0 +1,49 @@
+# VPN-guarded Docker Compose stack using Gluetun (https://github.com/qdm12/gluetun).
+# All Relay/aria2 egress shares Gluetun's VPN network namespace and firewall kill-switch.
+#
+# Usage:
+#   1. Create a .env file with your VPN provider credentials (see agents/profiles/docker-gluetun.md).
+#   2. Run: docker compose -f docker-compose.gluetun.yml up -d --build
+#
+services:
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: relay-vpn
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "${RELAY_PORT:-8080}:8080"
+    environment:
+      VPN_SERVICE_PROVIDER: "${VPN_SERVICE_PROVIDER:-protonvpn}"
+      VPN_TYPE: "${VPN_TYPE:-wireguard}"
+      WIREGUARD_PRIVATE_KEY: "${WIREGUARD_PRIVATE_KEY:-}"
+      WIREGUARD_ADDRESSES: "${WIREGUARD_ADDRESSES:-}"
+      SERVER_COUNTRIES: "${SERVER_COUNTRIES:-}"
+      VPN_PORT_FORWARDING: "${VPN_PORT_FORWARDING:-off}"
+      FIREWALL_INPUT_PORTS: "8080"
+      HTTP_CONTROL_SERVER_ADDRESS: ":8000"
+      HTTP_CONTROL_SERVER_LOG: "off"
+    volumes:
+      - ./relay-data/gluetun:/gluetun
+
+  relay:
+    build: .
+    container_name: relay
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    environment:
+      RELAY_HOST_LABEL: "${RELAY_HOST_LABEL:-Home VPN}"
+      RELAY_KEEP_DAYS: "${RELAY_KEEP_DAYS:-7}"
+      RELAY_VPN_MODE: "external"
+      RELAY_VPN_HEALTH_URL: "http://127.0.0.1:8000/v1/publicip/ip"
+      RELAY_ALLOW_CGNAT: "${RELAY_ALLOW_CGNAT:-false}"
+      RELAY_ALLOWED_HOSTS: "${RELAY_ALLOWED_HOSTS:-}"
+    volumes:
+      - ./relay-data/config:/config
+      - ./relay-data/data:/data
+      - ./relay-data/staging:/staging

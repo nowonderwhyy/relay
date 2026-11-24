@@ -1,0 +1,19 @@
+#!/sbin/openrc-run
+name="Relay VPN guard"
+description="Install nftables VPN-only kill-switch for the Relay download engine"
+
+depend() {
+	need localmount
+	before net
+}
+
+start() {
+	ebegin "Installing Relay nftables guard"
+	/usr/local/sbin/relay-engine guard >/dev/null
+	eend $?
+}
+
+stop() {
+	# Keep the protective firewall rule in place on stop.
+	return 0
+}
