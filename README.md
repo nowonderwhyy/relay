@@ -88,7 +88,14 @@ On phones and tablets, auto-save defaults to off (so big files never arrive unas
   - **macOS**: `brew install aria2`
   - **Debian / Ubuntu**: `sudo apt install aria2`
 
-### Install and Run
+### Easy Start (One-Click)
+
+- **Windows**: Double-click [`ezstart.bat`](ezstart.bat)
+- **macOS / Linux**: Run `./ezstart.sh`
+
+On first launch, it sets up `.venv`, installs Relay, checks for `aria2c`, starts the server with hardware-tuned settings, and opens your browser to **http://127.0.0.1:8080/**. Double-clicking again while Relay is already running simply opens the page.
+
+### Manual Install and Run
 
 ```bash
 git clone https://github.com/nowonderwhyy/relay.git
