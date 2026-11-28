@@ -143,6 +143,42 @@ def _recommend_profile(init_sys: str, tools: dict[str, str | None], vpn_ifaces: 
     return 'standalone-desktop'
 
 
+def _detect_ram_gb() -> float | None:
+    try:
+        if os.name == 'nt':
+            import ctypes
+
+            class MEMORYSTATUSEX(ctypes.Structure):
+                _fields_ = [
+                    ('dwLength', ctypes.c_uint32),
+                    ('dwMemoryLoad', ctypes.c_uint32),
+                    ('ullTotalPhys', ctypes.c_uint64),
+                    ('ullAvailPhys', ctypes.c_uint64),
+                    ('ullTotalPageFile', ctypes.c_uint64),
+                    ('ullAvailPageFile', ctypes.c_uint64),
+                    ('ullTotalVirtual', ctypes.c_uint64),
+                    ('ullAvailVirtual', ctypes.c_uint64),
+                    ('ullAvailExtendedVirtual', ctypes.c_uint64),
+                ]
+
+            st = MEMORYSTATUSEX()
+            st.dwLength = ctypes.sizeof(st)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):
+                return round(st.ullTotalPhys / (1024 ** 3), 1)
+        elif sys.platform.startswith('linux'):
+            meminfo = Path('/proc/meminfo')
+            if meminfo.is_file():
+                for line in meminfo.read_text(encoding='utf-8', errors='replace').splitlines():
+                    if line.startswith('MemTotal:'):
+                        return round(int(line.split()[1]) / (1024 ** 2), 1)
+        elif sys.platform == 'darwin':
+            raw = subprocess.check_output(['sysctl', '-n', 'hw.memsize'], text=True, timeout=2).strip()
+            return round(int(raw) / (1024 ** 3), 1)
+    except Exception:
+        return None
+    return None
+
+
 def main() -> None:
     tool_names = [
         'aria2c', 'uv', 'pip', 'docker', 'nft', 'ip', 'nmcli',
@@ -151,11 +187,16 @@ def main() -> None:
     tools = {name: _cmd_exists(name) for name in tool_names}
     init_sys = _detect_init_system()
     vpn_ifaces = _detect_vpn_interfaces()
+    cpu_count = os.cpu_count() or 1
+    ram_gb = _detect_ram_gb()
+    perf_profile = 'fast' if (ram_gb is not None and ram_gb >= 12.0 and cpu_count >= 6) else 'balanced'
     report = {
         'os': os.name,
         'platform': sys.platform,
         'distro': _detect_distro(),
         'arch': platform.machine(),
+        'cpu_threads': cpu_count,
+        'ram_gb': ram_gb,
         'hostname': socket.gethostname(),
         'python_version': platform.python_version(),
         'is_admin': (os.geteuid() == 0) if hasattr(os, 'geteuid') else False,
@@ -166,6 +207,7 @@ def main() -> None:
         'ports_available': {str(p): _check_port(p) for p in (80, 8080, 16874)},
         'storage': _storage_candidates(),
         'recommended_profile': _recommend_profile(init_sys, tools, vpn_ifaces),
+        'recommended_performance_profile': perf_profile,
     }
     print(json.dumps(report, indent=2))
 

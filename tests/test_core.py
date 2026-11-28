@@ -108,11 +108,22 @@ class CoreChecks(unittest.TestCase):
     def test_settings_layering_and_config_reload(self):
         with tempfile.TemporaryDirectory() as tmp:
             cfg = Path(tmp) / 'config.json'
-            write_config({'host_label': 'Lab', 'port': 9090, 'keep_days': 14}, cfg)
+            write_config({'host_label': 'Lab', 'port': 9090, 'keep_days': 14, 'performance_profile': 'balanced'}, cfg)
             settings = Settings.load(config_path=cfg, overrides={'port': 9191})
             self.assertEqual(settings.host_label, 'Lab')
             self.assertEqual(settings.port, 9191)
             self.assertEqual(settings.keep_days, 14)
+            self.assertEqual(settings.resolved_profile, 'balanced')
+            self.assertEqual(settings.disk_cache, '64M')
+
+            fast = Settings.load(config_path=cfg, overrides={'performance_profile': 'fast'})
+            self.assertEqual(fast.resolved_profile, 'fast')
+            self.assertEqual(fast.disk_cache, '256M')
+            self.assertEqual(fast.min_split_size, '1M')
+            self.assertEqual(fast.bt_max_peers, 250)
+            self.assertEqual(fast.bt_request_peer_speed_limit, '100M')
+            self.assertEqual(fast.bt_max_open_files, 512)
+            self.assertTrue(fast.http_accept_gzip)
 
             store = ConfigStore(cfg)
             self.assertEqual(store.get()['keep_days'], 14)

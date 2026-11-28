@@ -35,6 +35,7 @@ def _cmd_serve(args: argparse.Namespace) -> None:
         ('vpn_mode', 'vpn_mode'),
         ('vpn_interface', 'vpn_interface'),
         ('engine_mode', 'engine_mode'),
+        ('profile', 'performance_profile'),
     ]:
         val = getattr(args, attr, None)
         if val is not None:
@@ -56,10 +57,17 @@ def _cmd_serve(args: argparse.Namespace) -> None:
 
     display_host = '127.0.0.1' if settings.host in {'0.0.0.0', '::', ''} else settings.host
     url = f'http://{display_host}:{settings.port}/'
+    profile_desc = (
+        f'{settings.resolved_profile} (from auto)'
+        if settings.performance_profile == 'auto'
+        else settings.resolved_profile
+    )
     print(
         f'{settings.instance_name} ({settings.effective_host_label}) v{__version__}\n'
         f'  URL:      {url}  (bound to {settings.host}:{settings.port})\n'
-        f'  Mode:     engine={settings.engine_mode}, vpn={settings.vpn_mode}\n'
+        f'  Mode:     engine={settings.engine_mode}, vpn={settings.vpn_mode}, profile={profile_desc}\n'
+        f'  Tuning:   concurrent={settings.max_concurrent_downloads}, cache={settings.disk_cache}, '
+        f'alloc={settings.resolved_file_allocation}, bt_peers={settings.bt_max_peers}\n'
         f'  Staging:  {settings.staging_dir}\n'
         f'  Data:     {settings.data_dir}\n'
         f'  Config:   {settings.config_path}',
@@ -70,7 +78,16 @@ def _cmd_serve(args: argparse.Namespace) -> None:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
 
     try:
-        waitress_serve(app, host=settings.host, port=settings.port, threads=16, ident=None, channel_timeout=300)
+        waitress_serve(
+            app,
+            host=settings.host,
+            port=settings.port,
+            threads=16,
+            ident=None,
+            channel_timeout=300,
+            send_bytes=262144,
+            outbuf_overflow=4 * 1024 * 1024,
+        )
     except KeyboardInterrupt:
         pass
     finally:
@@ -95,7 +112,7 @@ def _cmd_init(args: argparse.Namespace) -> None:
         'staging_dir': staging,
         'data_dir': data,
         'keep_days': args.keep_days,
-        'max_concurrent_downloads': 3,
+        'performance_profile': args.profile,
         'engine_mode': args.engine_mode,
         'vpn_mode': args.vpn_mode,
         'vpn_interface': args.vpn_interface or '',
@@ -157,6 +174,14 @@ def _cmd_doctor(args: argparse.Namespace) -> None:
 
     cfg_exists = settings.config_path.is_file()
     record('config', True, f'{settings.config_path} ({"exists" if cfg_exists else "using defaults"})')
+    record(
+        'performance',
+        True,
+        f'profile={settings.resolved_profile} ({settings.performance_profile}), '
+        f'concurrent={settings.max_concurrent_downloads}, cache={settings.disk_cache}, '
+        f'alloc={settings.resolved_file_allocation}, min_split={settings.min_split_size}, '
+        f'bt_peers={settings.bt_max_peers}, bt_target={settings.bt_request_peer_speed_limit}',
+    )
 
     try:
         probe_dir = settings.staging_dir
@@ -218,6 +243,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument('--engine-mode', choices=['direct', 'helper'], help='engine backend (default: direct)')
     serve.add_argument('--vpn-mode', choices=['none', 'interface', 'external', 'guard'], help='VPN enforcement mode')
     serve.add_argument('--vpn-interface', help='VPN interface name (e.g. wg0, tun0)')
+    serve.add_argument('--profile', choices=['auto', 'balanced', 'fast'], help='performance profile (default: auto)')
     serve.add_argument('--open', action='store_true', help='open the Relay web page in the default browser')
 
     init = commands.add_parser('init', help='generate a config.json file for this environment')
@@ -231,6 +257,8 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument('--staging', default='')
     init.add_argument('--data', default='')
     init.add_argument('--keep-days', type=int, default=7)
+    init.add_argument('--profile', choices=['auto', 'balanced', 'fast'], default='auto',
+                      help='performance profile (auto picks fast on >=12GB RAM & >=6 threads)')
     init.add_argument('--engine-mode', choices=['direct', 'helper'], default='direct')
     init.add_argument('--vpn-mode', choices=['none', 'interface', 'external', 'guard'], default='none')
     init.add_argument('--vpn-interface', default='')

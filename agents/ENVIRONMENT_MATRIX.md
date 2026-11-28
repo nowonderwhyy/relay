@@ -28,8 +28,17 @@ Use this matrix to map a user's machine and VPN setup to the exact Relay configu
 | --- | --- | --- | --- |
 | Linux (`ext4`, `xfs`, `btrfs`) | `"auto"` -> `falloc` | `sudo apt install aria2` / `apk add aria2` / `pacman -S aria2` | `falloc` prevents torrent fragmentation instantaneously on ext4/xfs. |
 | Linux (FAT32 / exFAT / older NAS SMB mounts) | `"none"` | Same as above | Set `"file_allocation": "none"` if staging is on a filesystem that rejects `fallocate()`. |
-| Windows (NTFS) | `"auto"` -> `none` | `winget install aria2.aria2` or `choco install aria2` | `falloc` and `umask` are unsupported on Windows; Relay handles this automatically. |
+| Windows (NTFS) | `"auto"` -> `trunc` | `winget install aria2.aria2` or `choco install aria2` | `trunc` sets NTFS file size upfront without admin rights or zero-fill delay; `umask` is POSIX-only. |
 | macOS (APFS) | `"auto"` -> `none` | `brew install aria2` | `falloc` is unsupported on APFS; Relay uses `none` automatically. |
+
+## 3b. Performance Profiles (`performance_profile`)
+
+Relay defaults to `"performance_profile": "auto"`, which picks `fast` on hosts with ≥ 12 GB RAM and ≥ 6 CPU threads and `balanced` on modest low-RAM servers/SBCs. Any individual setting in `config.json` overrides the profile default.
+
+| Profile | `max_concurrent_downloads` | `disk_cache` | `min_split_size` | `bt_max_peers` | `bt_request_peer_speed_limit` | `bt_max_open_files` |
+| --- | --- | --- | --- | --- | --- | --- |
+| `balanced` | `3` | `64M` | `4M` | `100` | `10M` | `256` |
+| `fast` | `6` | `256M` | `1M` | `250` | `100M` | `512` |
 
 ## 4. Network & Access Control Keys
 

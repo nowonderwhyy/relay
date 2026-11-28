@@ -103,6 +103,79 @@ def _default_host_label() -> str:
     return 'Local'
 
 
+PERFORMANCE_PROFILES: dict[str, dict[str, Any]] = {
+    'balanced': {
+        'max_concurrent_downloads': 3,
+        'disk_cache': '64M',
+        'min_split_size': '4M',
+        'bt_max_peers': 100,
+        'bt_request_peer_speed_limit': '10M',
+        'bt_max_open_files': 256,
+    },
+    'fast': {
+        'max_concurrent_downloads': 6,
+        'disk_cache': '256M',
+        'min_split_size': '1M',
+        'bt_max_peers': 250,
+        'bt_request_peer_speed_limit': '100M',
+        'bt_max_open_files': 512,
+    },
+}
+
+
+def detect_system_ram_gb() -> float | None:
+    """Return total system RAM in GiB using stdlib only, or None if unavailable."""
+    try:
+        if os.name == 'nt':
+            import ctypes
+
+            class MEMORYSTATUSEX(ctypes.Structure):
+                _fields_ = [
+                    ('dwLength', ctypes.c_uint32),
+                    ('dwMemoryLoad', ctypes.c_uint32),
+                    ('ullTotalPhys', ctypes.c_uint64),
+                    ('ullAvailPhys', ctypes.c_uint64),
+                    ('ullTotalPageFile', ctypes.c_uint64),
+                    ('ullAvailPageFile', ctypes.c_uint64),
+                    ('ullTotalVirtual', ctypes.c_uint64),
+                    ('ullAvailVirtual', ctypes.c_uint64),
+                    ('ullAvailExtendedVirtual', ctypes.c_uint64),
+                ]
+
+            status = MEMORYSTATUSEX()
+            status.dwLength = ctypes.sizeof(status)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                return round(status.ullTotalPhys / (1024 ** 3), 1)
+        elif sys.platform.startswith('linux'):
+            meminfo = Path('/proc/meminfo')
+            if meminfo.is_file():
+                for line in meminfo.read_text(encoding='utf-8', errors='replace').splitlines():
+                    if line.startswith('MemTotal:'):
+                        kb = int(line.split()[1])
+                        return round(kb / (1024 ** 2), 1)
+        elif sys.platform == 'darwin':
+            import subprocess
+            raw = subprocess.check_output(['sysctl', '-n', 'hw.memsize'], text=True, timeout=2).strip()
+            return round(int(raw) / (1024 ** 3), 1)
+    except Exception:
+        return None
+    return None
+
+
+def resolve_performance_profile(requested: str = 'auto') -> str:
+    """Resolve 'auto' to 'fast' on high-spec machines (>= 12 GB RAM and >= 6 threads)."""
+    mode = (requested or 'auto').strip().lower()
+    if mode in PERFORMANCE_PROFILES:
+        return mode
+    if mode != 'auto':
+        raise ValueError(f'Unsupported performance_profile: {requested!r} (expected auto, balanced, or fast)')
+    ram_gb = detect_system_ram_gb()
+    cpus = os.cpu_count() or 1
+    if ram_gb is not None and ram_gb >= 12.0 and cpus >= 6:
+        return 'fast'
+    return 'balanced'
+
+
 @dataclasses.dataclass
 class Settings:
     """Resolved runtime settings for Relay."""
@@ -114,6 +187,8 @@ class Settings:
     host: str = '0.0.0.0'
     port: int = 8080
     keep_days: int = 7
+    performance_profile: str = 'auto'    # 'auto' | 'balanced' | 'fast'
+    resolved_profile: str = 'balanced'
     max_concurrent_downloads: int = 3
     engine_mode: str = 'direct'          # 'direct' | 'helper'
     vpn_mode: str = 'none'               # 'none' | 'interface' | 'external' | 'guard'
@@ -130,7 +205,9 @@ class Settings:
     min_split_size: str = '4M'
     seed_time: int = 0
     bt_max_peers: int = 100
-    bt_request_peer_speed_limit: str = '5M'
+    bt_request_peer_speed_limit: str = '10M'
+    bt_max_open_files: int = 256
+    http_accept_gzip: bool = True
     max_upload_limit: str = '0'
     dht_entry_point: str = 'router.bittorrent.com:6881'
     fallback_trackers: list[str] = dataclasses.field(default_factory=lambda: list(DEFAULT_TRACKERS))
@@ -151,7 +228,11 @@ class Settings:
     def resolved_file_allocation(self) -> str:
         if self.file_allocation != 'auto':
             return self.file_allocation
-        return 'falloc' if sys.platform.startswith('linux') else 'none'
+        if sys.platform.startswith('linux'):
+            return 'falloc'
+        if os.name == 'nt':
+            return 'trunc'
+        return 'none'
 
     @classmethod
     def load(
@@ -160,7 +241,7 @@ class Settings:
         overrides: dict[str, Any] | None = None,
         portable: bool = False,
     ) -> Settings:
-        """Load settings: OS defaults -> config JSON -> env vars -> explicit overrides."""
+        """Load settings: OS/profile defaults -> config JSON -> env vars -> explicit overrides."""
         defaults = default_paths(portable=portable)
         env_config = os.environ.get('RELAY_CONFIG') or os.environ.get('RELAY_WEB_CONFIG')
         cfg_path = Path(config_path or env_config or defaults['config']).expanduser()
@@ -198,6 +279,9 @@ class Settings:
         engine_mode = str(pick('engine_mode', ('RELAY_ENGINE_MODE',), 'direct')).strip().lower()
         default_vpn_mode = 'guard' if engine_mode == 'helper' else 'none'
         vpn_mode = str(pick('vpn_mode', ('RELAY_VPN_MODE',), default_vpn_mode)).strip().lower()
+        requested_profile = str(pick('performance_profile', ('RELAY_PROFILE', 'RELAY_PERFORMANCE_PROFILE'), 'auto')).strip().lower()
+        resolved_profile = resolve_performance_profile(requested_profile)
+        prof = PERFORMANCE_PROFILES[resolved_profile]
 
         if engine_mode not in {'direct', 'helper'}:
             raise ValueError(f'Unsupported engine_mode: {engine_mode!r} (expected direct or helper)')
@@ -219,7 +303,9 @@ class Settings:
             host=str(pick('host', ('RELAY_HOST',), '0.0.0.0')).strip() or '0.0.0.0',
             port=int(pick('port', ('RELAY_PORT',), 8080)),
             keep_days=max(1, int(pick('keep_days', ('RELAY_KEEP_DAYS',), 7))),
-            max_concurrent_downloads=max(1, int(pick('max_concurrent_downloads', ('RELAY_MAX_CONCURRENT',), 3))),
+            performance_profile=requested_profile,
+            resolved_profile=resolved_profile,
+            max_concurrent_downloads=max(1, int(pick('max_concurrent_downloads', ('RELAY_MAX_CONCURRENT',), prof['max_concurrent_downloads']))),
             engine_mode=engine_mode,
             vpn_mode=vpn_mode,
             vpn_interface=str(pick('vpn_interface', ('RELAY_VPN_INTERFACE',), '')).strip(),
@@ -229,13 +315,15 @@ class Settings:
             aria2_binary=str(pick('aria2_binary', ('RELAY_ARIA2_BIN',), '')).strip(),
             rpc_port=int(pick('rpc_port', ('RELAY_RPC_PORT',), 16874)),
             file_allocation=str(pick('file_allocation', ('RELAY_FILE_ALLOCATION',), 'auto')).strip().lower(),
-            disk_cache=str(pick('disk_cache', ('RELAY_DISK_CACHE',), '64M')).strip(),
-            max_connection_per_server=max(1, int(pick('max_connection_per_server', ('RELAY_MAX_CONN',), 16))),
+            disk_cache=str(pick('disk_cache', ('RELAY_DISK_CACHE',), prof['disk_cache'])).strip(),
+            max_connection_per_server=max(1, min(16, int(pick('max_connection_per_server', ('RELAY_MAX_CONN',), 16)))),
             split=max(1, int(pick('split', ('RELAY_SPLIT',), 16))),
-            min_split_size=str(pick('min_split_size', ('RELAY_MIN_SPLIT_SIZE',), '4M')).strip(),
+            min_split_size=str(pick('min_split_size', ('RELAY_MIN_SPLIT_SIZE',), prof['min_split_size'])).strip(),
             seed_time=max(0, int(pick('seed_time', ('RELAY_SEED_TIME',), 0))),
-            bt_max_peers=max(0, int(pick('bt_max_peers', ('RELAY_BT_MAX_PEERS',), 100))),
-            bt_request_peer_speed_limit=str(pick('bt_request_peer_speed_limit', ('RELAY_BT_SPEED_LIMIT',), '5M')).strip(),
+            bt_max_peers=max(0, int(pick('bt_max_peers', ('RELAY_BT_MAX_PEERS',), prof['bt_max_peers']))),
+            bt_request_peer_speed_limit=str(pick('bt_request_peer_speed_limit', ('RELAY_BT_SPEED_LIMIT',), prof['bt_request_peer_speed_limit'])).strip(),
+            bt_max_open_files=max(16, int(pick('bt_max_open_files', ('RELAY_BT_MAX_OPEN_FILES',), prof['bt_max_open_files']))),
+            http_accept_gzip=_parse_bool(pick('http_accept_gzip', ('RELAY_HTTP_ACCEPT_GZIP',), True), default=True),
             max_upload_limit=str(pick('max_upload_limit', ('RELAY_MAX_UPLOAD_LIMIT',), '0')).strip(),
             dht_entry_point=str(pick('dht_entry_point', ('RELAY_DHT_ENTRY_POINT',), 'router.bittorrent.com:6881')).strip(),
             fallback_trackers=trackers,

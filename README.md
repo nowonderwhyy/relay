@@ -191,6 +191,7 @@ Generate a starter config with `relay init` or copy [`config.example.json`](conf
 | `staging_dir` | `RELAY_ROOT` | OS user data dir | Active and completed downloads |
 | `data_dir` | `RELAY_DATA` | OS user data dir | SQLite ledger and uploaded `.torrent`s |
 | `keep_days` | `RELAY_KEEP_DAYS` | `7` | Days before completed/failed jobs are auto-erased |
+| `performance_profile` | `RELAY_PROFILE` | `auto` | `auto` (`fast` on >=12 GB RAM & >=6 threads, else `balanced`), `balanced`, or `fast` |
 | `engine_mode` | `RELAY_ENGINE_MODE` | `direct` | `direct` (standalone) or `helper` (Linux root helper) |
 | `vpn_mode` | `RELAY_VPN_MODE` | `none` | `none`, `interface`, `external`, or `guard` |
 | `vpn_interface` | `RELAY_VPN_INTERFACE` | `""` | Tunnel interface (`wg0`, `tun0`, etc.) |

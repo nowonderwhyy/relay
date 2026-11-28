@@ -296,7 +296,7 @@ def zip_stream(base: Path, files: list[dict[str, Any]]) -> Iterator[bytes]:
             info = zipfile.ZipInfo.from_file(full, arcname=item['path'])
             info.compress_type = zipfile.ZIP_STORED
             with full.open('rb') as source, archive.open(info, 'w', force_zip64=info.file_size > 0x7FFFFFFF) as target:
-                while block := source.read(1024 * 1024):
+                while block := source.read(4 * 1024 * 1024):
                     target.write(block)
                     if sink.position and sink.chunks:
                         yield sink.take()

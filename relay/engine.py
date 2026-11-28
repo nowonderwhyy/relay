@@ -352,6 +352,8 @@ class DirectEngine(BaseEngine):
             'seed-time': str(s.seed_time),
             'bt-max-peers': str(s.bt_max_peers),
             'bt-request-peer-speed-limit': s.bt_request_peer_speed_limit,
+            'bt-max-open-files': str(s.bt_max_open_files),
+            'http-accept-gzip': 'true' if s.http_accept_gzip else 'false',
             'max-overall-upload-limit': s.max_upload_limit,
             'bt-enable-lpd': 'false',
             'enable-dht': 'true',
